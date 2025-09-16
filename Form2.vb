@@ -1,10 +1,10 @@
-﻿Imports MySql.Data.MySqlClient
+Imports MySql.Data.MySqlClient
 
 Public Class Form2
     Private connectionString As String = "server=localhost;user id=root;password=;database=org_record"
 
 
-    Private Function GetSelectedOrganizations() As List(Of String)
+    Private Function GetSelectedOrganizations_Create() As List(Of String)
         Dim orgs As New List(Of String)
         If chkPGITS.Checked Then orgs.Add("PGITS")
         If chkPSITS.Checked Then orgs.Add("PSITS")
@@ -16,21 +16,30 @@ Public Class Form2
         Return String.Join(", ", orgs)
     End Function
 
-
-    Private Sub SetOrganizations(orgs As String)
-        chkPGITS.Checked = orgs.Contains("PGITS")
-        chkPSITS.Checked = orgs.Contains("PSITS")
-        chkGMITS.Checked = orgs.Contains("GMITS")
-    End Sub
-
-
-    Private Sub ClearInputs()
+    Private Sub ClearInputs_Create()
         inputFNAME.Clear()
         inputLNAME.Clear()
         inputYearLevel.Clear()
         chkPGITS.Checked = False
         chkPSITS.Checked = False
         chkGMITS.Checked = False
+    End Sub
+
+
+    Private Sub SetUpdateOrganizations(orgs As String)
+        updateChkPGITS.Checked = orgs.Contains("PGITS")
+        updateChkPSITS.Checked = orgs.Contains("PSITS")
+        updateChkGMITS.Checked = orgs.Contains("GMITS")
+    End Sub
+
+    Private Sub ClearInputs_Update()
+        updateID.Text = ""
+        updateFNAME.Text = ""
+        updateLNAME.Text = ""
+        updateYearLevel.Text = ""
+        updateChkPGITS.Checked = False
+        updateChkPSITS.Checked = False
+        updateChkGMITS.Checked = False
     End Sub
 
 
@@ -47,16 +56,16 @@ Public Class Form2
         End Using
     End Sub
 
-
     Private Sub btnSubmit_Click(sender As Object, e As EventArgs) Handles btnSubmit.Click
-        If String.IsNullOrWhiteSpace(inputFNAME.Text) OrElse String.IsNullOrWhiteSpace(inputLNAME.Text) OrElse
+        If String.IsNullOrWhiteSpace(inputFNAME.Text) OrElse
+           String.IsNullOrWhiteSpace(inputLNAME.Text) OrElse
            String.IsNullOrWhiteSpace(inputYearLevel.Text) Then
 
             MessageBox.Show("Please fill in all fields.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
             Return
         End If
 
-        Dim orgs As List(Of String) = GetSelectedOrganizations()
+        Dim orgs As List(Of String) = GetSelectedOrganizations_Create()
         If orgs.Count < 1 OrElse orgs.Count > 2 Then
             MessageBox.Show("You must select at least 1 and at most 2 organizations.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
             Return
@@ -64,6 +73,7 @@ Public Class Form2
 
         Using connection As New MySqlConnection(connectionString)
             connection.Open()
+
 
             Dim checkQuery As String = "SELECT COUNT(*) FROM names WHERE fname=@fname AND lname=@lname AND year_level=@year AND organization=@org"
             Using checkCmd As New MySqlCommand(checkQuery, connection)
@@ -90,7 +100,7 @@ Public Class Form2
                     command.ExecuteNonQuery()
                     MessageBox.Show("Record created successfully!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information)
                     RetrieveData()
-                    ClearInputs()
+                    ClearInputs_Create()
                 Catch ex As MySqlException
                     MessageBox.Show("Error: " & ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
                 End Try
@@ -125,7 +135,6 @@ Public Class Form2
         End Using
     End Sub
 
-
     Private Sub dgvNames_CellContentClick(sender As Object, e As DataGridViewCellEventArgs) Handles dgvNames.CellContentClick
         If e.RowIndex >= 0 Then
             Dim selectedRow As DataGridViewRow = dgvNames.Rows(e.RowIndex)
@@ -135,7 +144,8 @@ Public Class Form2
             updateFNAME.Text = selectedRow.Cells("fname").Value.ToString()
             updateLNAME.Text = selectedRow.Cells("lname").Value.ToString()
             updateYearLevel.Text = selectedRow.Cells("year_level").Value.ToString()
-            SetOrganizations(selectedRow.Cells("organization").Value.ToString())
+            SetUpdateOrganizations(selectedRow.Cells("organization").Value.ToString())
+
 
             deleteID.Text = selectedRow.Cells("id").Value.ToString()
             deleteFNAME.Text = selectedRow.Cells("fname").Value.ToString()
@@ -148,8 +158,8 @@ Public Class Form2
 
     Private Sub btnUpdate_Click(sender As Object, e As EventArgs) Handles btnUpdate.Click
         If String.IsNullOrWhiteSpace(updateFNAME.Text) OrElse
-       String.IsNullOrWhiteSpace(updateLNAME.Text) OrElse
-       String.IsNullOrWhiteSpace(updateYearLevel.Text) Then
+           String.IsNullOrWhiteSpace(updateLNAME.Text) OrElse
+           String.IsNullOrWhiteSpace(updateYearLevel.Text) Then
 
             MessageBox.Show("First Name, Last Name, and Year Level cannot be blank.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
             Return
@@ -157,10 +167,9 @@ Public Class Form2
 
 
         Dim selectedOrgs As New List(Of String)
-        If chkPGITS.Checked Then selectedOrgs.Add(chkPGITS.Text)
-        If chkPSITS.Checked Then selectedOrgs.Add(chkPSITS.Text)
-        If chkGMITS.Checked Then selectedOrgs.Add(chkGMITS.Text)
-
+        If updateChkPGITS.Checked Then selectedOrgs.Add("PGITS")
+        If updateChkPSITS.Checked Then selectedOrgs.Add("PSITS")
+        If updateChkGMITS.Checked Then selectedOrgs.Add("GMITS")
 
         If selectedOrgs.Count = 0 OrElse selectedOrgs.Count > 2 Then
             MessageBox.Show("Please select 1 or 2 organizations only.", "Invalid Selection", MessageBoxButtons.OK, MessageBoxIcon.Warning)
@@ -173,7 +182,6 @@ Public Class Form2
 
         Using connection As New MySqlConnection(connectionString)
             Using command As New MySqlCommand(query, connection)
-
                 command.Parameters.AddWithValue("@fname", updateFNAME.Text)
                 command.Parameters.AddWithValue("@lname", updateLNAME.Text)
                 command.Parameters.AddWithValue("@year_level", updateYearLevel.Text)
@@ -183,27 +191,15 @@ Public Class Form2
                 Try
                     connection.Open()
                     command.ExecuteNonQuery()
-                    MessageBox.Show("Record updated successfully!", "Success",
-                                MessageBoxButtons.OK, MessageBoxIcon.Information)
+                    MessageBox.Show("Record updated successfully!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information)
                     RetrieveData()
-
-
-                    updateID.Text = ""
-                    updateFNAME.Text = ""
-                    updateLNAME.Text = ""
-                    updateYearLevel.Text = ""
-                    chkPGITS.Checked = False
-                    chkPSITS.Checked = False
-                    chkGMITS.Checked = False
-
+                    ClearInputs_Update()
                 Catch ex As MySqlException
-                    MessageBox.Show("Error: " & ex.Message, "Error",
-                                MessageBoxButtons.OK, MessageBoxIcon.Error)
+                    MessageBox.Show("Error: " & ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
                 End Try
             End Using
         End Using
     End Sub
-
 
 
     Private Sub btnDelete_Click(sender As Object, e As EventArgs) Handles btnDelete.Click
@@ -228,7 +224,6 @@ Public Class Form2
                         MessageBox.Show("Record deleted successfully!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information)
                         RetrieveData()
 
-
                         deleteID.Text = "--"
                         deleteFNAME.Text = "--"
                         deleteLNAME.Text = "--"
@@ -241,7 +236,6 @@ Public Class Form2
             End Using
         End If
     End Sub
-
 
     Private Sub btnSearch_Click(sender As Object, e As EventArgs) Handles btnSearch.Click
         Dim searchValue As String = TextBox1.Text.Trim()
